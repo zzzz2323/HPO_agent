@@ -1,0 +1,102 @@
+preprocess:
+  abbreviation_expansion:
+    system: "You are a clinical abbreviation expander."
+    user_template: |
+      Your job is to expand a medical abbreviation in the given sentence.
+
+      Requirements:
+      1. Output ONLY the expanded full form of the abbreviation.
+      2. Do NOT output the abbreviation itself.
+      3. Do NOT output any explanation or extra words.
+      4. Do NOT use quotation marks.
+      5. Output must be one short noun phrase only (no sentence, no period).
+      6. If it is NOT an abbreviation, output the word itself.
+
+      Sentence: {{ sentence }}
+      Abbreviation: {{ word }}
+
+      Now output only the expanded form:
+
+
+normalization:
+  disambiguation:
+    system: "You are a medical terminology assistant."
+    user_template: |
+      Task:
+      Given a clinical mention and its sentence context, select the single best matching HPO term from the candidate list. 
+      You MUST identify the candidate that best represents the meaning of the mention in this specific sentence context.
+
+      Output requirement (very important):
+      - Output must be EXACTLY one entire line copied from the Candidates list.
+      - No explanation.
+      - No JSON.
+      - No reasoning.
+      - No additional words.
+      - Output must match exactly one candidate line, character-by-character.
+
+      Mention:
+      {{ mention }}
+
+      Sentence context:
+      {{ context }}
+
+      Candidates:
+      {{ candidate_list }}
+
+      Now output the best candidate (copy exactly one line from above):
+
+# D阶段：断言分类
+assertion:
+  classification:
+    system: "You are an expert Clinical NLP system specializing in assertion status classification."
+    user_template: |
+      You are a clinical NLP system that performs assertion status classification.\n
+      Your task is to determine the assertion status of a clinical finding as discussed in the sentence.\n\n
+
+      Assertion categories are defined as follows:\n
+      - present: The finding is stated as currently true for the patient.\n
+      - absent: The finding is explicitly negated or ruled out.\n
+      - uncertain: The clinician expresses uncertainty, suspicion, possibility, or conditional phrasing.\n
+      - family: The finding refers to family medical history, not the patient.\n
+      - historical: The finding refers to a past condition, not current.\n\n
+
+      Very important output rules:\n
+      - Output MUST be exactly one valid JSON object and nothing else.\n
+      - Do NOT add explanations, comments, markdown, or text outside JSON.\n
+      - The JSON schema must be:\n"
+        {\"label\": \"...\", \"reason\": \"...\", \"confidence\": 0.0}\n
+      - \"label\" must be one of: present, absent, uncertain, family, historical.\n
+      - \"confidence\" must be a number between 0 and 1.\n\n
+
+      Here is the clinical finding and its sentence context:\n
+      f"- Finding: {mention}\n
+      f"- Sentence: {context}\n\n
+
+      Now output ONLY the JSON object:
+
+
+# E阶段：修饰词绑定
+postcoordination:
+  binding:
+    system: "You are an expert Clinical NLP Coordinator."
+    user_template: |
+      You are a clinical NLP system for phenotype post-coordination.\n\n
+      Your task is to correctly bind modifiers to phenotypes based on the provided sentence context.\n
+      For each phenotype, apply the most appropriate modifier slot based on the context of the sentence.\n
+      You can use only the provided modifiers, and at most one value should be applied to each slot for each phenotype.\n\n
+            
+      The following rules should be followed when providing the output:\n
+      - The output MUST be a valid JSON object and strictly follow the structure below.\n
+      - Do NOT provide any explanations, text outside of the JSON, or unnecessary markdown.\n
+      - Do NOT repeat the input text.\n
+      - The output JSON should map phenotype indices to corresponding modifiers.\n
+      - If no modifier applies to a phenotype, return an empty object for that phenotype.\n\n
+
+      Here is the input information for modifier binding:\n
+      f"Sentence: {sentence}\n\n"
+      f"Phenotypes: {json.dumps(ph_list, ensure_ascii=False)}\n\n"
+      f"Modifiers (grouped by slot): {json.dumps(mods_by_slot, ensure_ascii=False)}\n\n
+
+      JSON output template:\n
+      f"{template}\n\n"
+      Now output ONLY the JSON object (follow the template structure exactly):
